@@ -9,19 +9,20 @@ typedef struct {
     long long qtd_primos;
 } Faixa;
 
+
 int ehPrimo(long long n) {
     if (n <= 1) return 0;
-    if (n == 2) return 1;
-    if (n % 2 == 0) return 0;
+    if (n == 2 || n == 3) return 1;
+    if (n % 2 == 0 || n % 3 == 0) return 0;
 
     long long limite = (long long) sqrt((double)n);
 
-    for (long long i = 3; i <= limite; i += 2) {
-        if (n % i == 0) return 0;
+    for (long long i = 5; i <= limite; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) return 0;
     }
 
     return 1;
-}
+}   
 
 void *contaPrimos(void *arg) {
     Faixa *faixa = (Faixa *) arg;
@@ -32,13 +33,14 @@ void *contaPrimos(void *arg) {
             faixa->qtd_primos++;
         }
     }
-
     return NULL;
 }
 
 int main() {
     long long N;
     int T;
+    struct timespec inicio, fim;
+    double tempo_gasto;
 
     printf("Digite N: ");
     scanf("%lld", &N);
@@ -62,6 +64,8 @@ int main() {
     long long tamanho = (N + 1) / T;
     long long resto = (N + 1) % T;
     long long atual = 0;
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &inicio);
 
     for (int i = 0; i < T; i++) {
         long long extra = (i < resto) ? 1 : 0;
@@ -87,7 +91,12 @@ int main() {
         total += faixas[i].qtd_primos;
     }
 
+    clock_gettime(CLOCK_MONOTONIC_RAW, &fim);
+    tempo_gasto = (fim.tv_sec - inicio.tv_sec) +
+                  (fim.tv_nsec - inicio.tv_nsec) / 1e9;
     printf("Quantidade de primos entre 0 e %lld: %lld\n", N, total);
+    printf("Tempo de execucao: %.6f segundos\n", tempo_gasto);
+
 
     free(threads);
     free(faixas);

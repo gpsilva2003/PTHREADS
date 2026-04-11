@@ -42,6 +42,8 @@ void *contaPrimos(void *arg) {
 int main() {
     long long N;
     int T;
+    struct timespec inicio, fim;
+    double tempo_gasto;
 
     printf("Digite N: ");
     scanf("%lld", &N);
@@ -61,6 +63,7 @@ int main() {
         printf("Erro de alocacao.\n");
         return 1;
     }
+    clock_gettime(CLOCK_MONOTONIC_RAW, &inicio);
 
     for (int i = 0; i < T; i++) {
 
@@ -83,7 +86,11 @@ int main() {
         total += param[i].qtd_primos;
     }
 
+    clock_gettime(CLOCK_MONOTONIC_RAW, &fim);
+    tempo_gasto = (fim.tv_sec - inicio.tv_sec) +
+                  (fim.tv_nsec - inicio.tv_nsec) / 1e9;
     printf("Quantidade de primos entre 0 e %lld: %lld\n", N, total);
+    printf("Tempo de execucao: %.6f segundos\n", tempo_gasto);
 
     free(threads);
     free(param);

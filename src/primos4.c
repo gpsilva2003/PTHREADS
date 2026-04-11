@@ -9,22 +9,6 @@ typedef struct {
     long long qtd_primos;
 } Faixa;
 
-long long N;
-
-// int ehPrimo(long long n) {
-//     if (n <= 1) return 0;
-//     if (n == 2) return 1;
-//     if (n % 2 == 0) return 0;
-
-//     long long limite = (long long) sqrt((double)n);
-
-//     for (long long i = 3; i <= limite; i += 2) {
-//         if (n % i == 0) return 0;
-//     }
-
-//     return 1;
-// }
-
 int ehPrimo(long long n) {
     if (n <= 1) return 0;
     if (n == 2 || n == 3) return 1;
@@ -37,36 +21,22 @@ int ehPrimo(long long n) {
     }
 
     return 1;
-}   
+} 
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-int i_global = 0;
-
-void *contaPrimos2(void *arg) {
-    register int total = 0;
-
-    while (1) {
-        register long i_local;
-
-        pthread_mutex_lock(&mutex);
-        if (i_global >= N) {
-            pthread_mutex_unlock(&mutex);
-            break;
+void *contaPrimos(void *arg) {
+    Faixa *faixa = (Faixa *) arg;
+    register long long qtd_local = 0; 
+    for (long long i = faixa->inicio; i <= faixa->fim; i++) {
+        if (ehPrimo(i)) {
+            qtd_local++;
         }
-        i_local = i_global++;
-        pthread_mutex_unlock(&mutex);
-
-        if (ehPrimo(i_local))
-            total++;
     }
-
-    int *ret = malloc(sizeof(int));
-    *ret = total;
-    pthread_exit(ret);
+    faixa->qtd_primos = qtd_local;
+    return NULL;
 }
 
-
 int main() {
+    long long N;
     int T;
     struct timespec inicio, fim;
     double tempo_gasto;
@@ -83,29 +53,41 @@ int main() {
     }
 
     pthread_t *threads = malloc(T * sizeof(pthread_t));
+    Faixa *faixas = malloc(T * sizeof(Faixa));
 
-    if (threads == NULL) {
+    if (threads == NULL || faixas == NULL) {
         printf("Erro de alocacao.\n");
         return 1;
     }
 
+    long long tamanho = (N + 1) / T;
+    long long resto = (N + 1) % T;
+    long long atual = 0;
+
     clock_gettime(CLOCK_MONOTONIC_RAW, &inicio);
 
     for (int i = 0; i < T; i++) {
-        if (pthread_create(&threads[i], NULL, contaPrimos2, NULL)) {
+        long long extra = (i < resto) ? 1 : 0;
+
+        faixas[i].inicio = atual;
+        faixas[i].fim = atual + tamanho + extra - 1;
+        faixas[i].qtd_primos = 0;
+
+        atual = faixas[i].fim + 1;
+
+        if (pthread_create(&threads[i], NULL, contaPrimos, &faixas[i]) != 0) {
             printf("Erro ao criar thread %d.\n", i);
             free(threads);
+            free(faixas);
             return 1;
         }
     }
 
     long long total = 0;
 
-
     for (int i = 0; i < T; i++) {
-        void *retorno;
-        pthread_join(threads[i], &retorno);
-        total += *(int*) retorno;
+        pthread_join(threads[i], NULL);
+        total += faixas[i].qtd_primos;
     }
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &fim);
@@ -115,7 +97,6 @@ int main() {
     printf("Tempo de execucao: %.6f segundos\n", tempo_gasto);
 
     free(threads);
-    pthread_mutex_destroy(&mutex);
-
+    free(faixas);
     return 0;
 }
